@@ -5,7 +5,7 @@ license-file:   LICENSE
 author:         dan corson <danl@alum.mit.edu>
 synopsis:       <syn>
 build-type:     Simple
-build-depends:  FUtil, base, containers, fgl, haskell98
+build-depends:  FUtil, base, containers, fgl, haskell98, MonadRandom
 
 executable:     tondo
 main-is:        Main.hs
