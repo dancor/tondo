@@ -3,12 +3,15 @@ module Main where
 import Control.Applicative hiding (empty)
 import Control.Arrow
 import Control.Monad.Random
+import Data.Char
 import Data.Graph.Inductive
 import Data.List
 import Data.Maybe
 import FUtil
 import Numeric
 import System.Console.GetOpt
+import System.Directory
+import System.FilePath
 import qualified Data.Set as S
 
 data Options = Options {
@@ -25,16 +28,15 @@ data Guid = Guid Integer
   deriving (Eq, Ord)
 
 instance Show Guid where
-  show (Guid i) = (\ s -> replicate (32 - length s) '0' ++ s) (showHex i "")
+  show (Guid i) = (\ s -> replicate (32 - length s) '0' ++ s) $ showHex i ""
 
 instance Read Guid where
-  readsPrec _ = map (first Guid) . readHex
+  readsPrec _ = map (first Guid) . readHex . dropWhile isSpace
 
 data Task = Task {
   taskName :: String,
   taskDesc :: String,
-  taskGuid :: Guid
-  }
+  taskGuid :: Guid}
   deriving (Eq, Ord, Read, Show)
 -- KwlrThan influences ordering in default view
 -- (todo)
@@ -49,6 +51,7 @@ data TaskLogAction =
   DelTask Guid |
   AddConn Guid Guid Conn |
   DelConn Guid Guid Conn
+  deriving (Eq, Ord, Read, Show)
 
 tasksFromLog :: [TaskLogAction] -> Tasks
 tasksFromLog = foldl' (flip tasksDoLogAction) tasksEmpty
@@ -127,12 +130,18 @@ save tasks = nodesStr ++ edgesStr where
 
 main :: IO ()
 main = do
-  t1 <- evalRandIO $ newTask "projects" ""
-  t2 <- evalRandIO $ newTask "programming" ""
-  let
-    tasks = tasksFromLog [
-      AddTask (Guid 0) t1,
-      AddTask (taskGuid t1) t2]
-  putStrLn $ pretty (Guid 0) tasks
-  putStrLn $ pretty (taskGuid t1) tasks
+  home <- getHomeDirectory
+  let taskLogFilename = home </> ".tondo" </> "taskLog"
+  taskLog <- doesFileExist taskLogFilename >>= \ t -> if t
+    then map read . lines <$> readFileStrict taskLogFilename
+    else do
+      -- starter example
+      t1 <- evalRandIO $ newTask "projects" ""
+      t2 <- evalRandIO $ newTask "programming" ""
+      return [
+        AddTask (Guid 0) t1,
+        AddTask (taskGuid t1) t2]
+  let tasks = tasksFromLog taskLog
   putStrLn $ save tasks
+  let taskLog' = taskLog
+  writeFile taskLogFilename . unlines $ map show taskLog'
