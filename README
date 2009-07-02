@@ -1,2 +1,15 @@
 current problem
 - get simple interactive modding to work
+
+atomic operations
+- add/rem node
+- add/rem conn
+
+effects on underlying maps
+- add node: add key
+- rem node: rem key
+- add conn: add key
+- rem conn: rem key
+
+conflict resolution can just be ours/theirs and you move the bad commit and
+then an undo before the good one.  that loses less info than alternatives.

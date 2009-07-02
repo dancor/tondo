@@ -4,11 +4,12 @@ import Control.Applicative hiding (empty)
 import Control.Arrow
 import Control.Monad.Random
 import Data.Char
+import Data.Guid
 import Data.Graph.Inductive
 import Data.List
 import Data.Maybe
+import Data.Versioned.Map
 import FUtil
-import Numeric
 import System.Console.GetOpt
 import System.Directory
 import System.FilePath
@@ -24,15 +25,6 @@ options :: [OptDescr (Options -> Options)]
 options = [
   ]
 
-data Guid = Guid Integer
-  deriving (Eq, Ord)
-
-instance Show Guid where
-  show (Guid i) = (\ s -> replicate (32 - length s) '0' ++ s) $ showHex i ""
-
-instance Read Guid where
-  readsPrec _ = map (first Guid) . readHex . dropWhile isSpace
-
 data Task = Task {
   taskName :: String,
   taskDesc :: String,
@@ -44,7 +36,6 @@ data Conn = DepsOn | Contains | HasProp | KwlrThan
   deriving (Eq, Ord, Read, Show)
 
 type Tasks = Gr Task (S.Set Conn)
-type SRand = Rand StdGen
 
 data TaskLogAction =
   AddTask Guid Task |
@@ -109,10 +100,7 @@ pretty guid g = unlines .
     where
     indOf ind = if ind == 0 then "" else replicate (2 * (ind - 1)) ' ' ++ "- "
 
-newGuid :: SRand Guid
-newGuid = Guid <$> getRandomR (0, 2 ^ 128)
-
-newTask :: String -> String -> SRand Task
+newTask :: (RandomGen g) => String -> String -> Rand g Task
 newTask name desc = Task name desc <$> newGuid
 
 save :: (Graph gr) => gr Task (S.Set Conn) -> String
