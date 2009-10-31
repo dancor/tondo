@@ -51,19 +51,22 @@ parsePairs = M.fromList .
 
 unparsePairs :: [(KType, VType)] -> Content
 unparsePairs = B.concat . map (\ (k, v) -> esc k `B.append`
-  B.singleton byteNl `B.append` esc v `B.append` B.singleton byteNl)
+  B.singleton byteTab `B.append` esc v `B.append` B.singleton byteNl)
 
 data ConflType a =
   AddAdd a a |
   AddChange a |
   ChangeAdd a |
   ChangeChange a a
+  deriving (Show)
 
 data MergeRes a =
   MergeOk a |
   MergeConfl (ConflType a)
+  deriving (Show)
 
 data DiffType a = DiffAdd a | DiffDel a | DiffChange a a
+  deriving (Show)
 
 diffMap :: M.Map KType VType -> M.Map KType VType ->
   M.Map KType (DiffType VType)
@@ -72,10 +75,11 @@ diffMap a b = M.mapMaybe g $ M.unionWith f (M.map DiffDel a) (M.map DiffAdd b)
   f (DiffDel x) (DiffAdd y) = DiffChange x y
   g a@(DiffChange x y) = if x == y then Nothing else Just a
 
-mergeDiffMaps :: M.Map KType (DiffType VType) ->
+mergeDiffMaps :: M.Map KType VType -> M.Map KType (DiffType VType) ->
   M.Map KType (DiffType VType) -> M.Map KType (MergeRes VType)
-mergeDiffMaps a b =
-  M.mapMaybe g $ M.unionWith f (M.map Right a) (M.map Right b)
+mergeDiffMaps orig a b = M.unionWith const
+    (M.mapMaybe g $ M.unionWith f (M.map Right a) (M.map Right b))
+    (M.map MergeOk orig)
   where
   f a@(Right (DiffAdd x)) (Right (DiffAdd y)) =
     if x == y then a else Left (AddAdd x y)
@@ -111,7 +115,11 @@ mapMergeDriver parent current other = (merge, gotConflicts) where
   oM = parsePairs other
   pToCM = diffMap pM cM
   pToOM = diffMap pM oM
-  mM = mergeDiffMaps pToCM pToOM
+{-
+  merge = B.pack $ map (fromIntegral . ord) $ show (pM, cM, oM, pToCM, pToOM)
+  gotConflicts = False
+  -}
+  mM = mergeDiffMaps pM pToCM pToOM
   gotConflicts = any (isConflict . snd) $ M.toList mM
   merge = unparsePairs . concatMap f . M.toList $ M.map showMerge mM
   f (a, strs) = map ((,) a) strs
