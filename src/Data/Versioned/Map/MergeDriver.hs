@@ -115,10 +115,6 @@ mapMergeDriver parent current other = (merge, gotConflicts) where
   oM = parsePairs other
   pToCM = diffMap pM cM
   pToOM = diffMap pM oM
-{-
-  merge = B.pack $ map (fromIntegral . ord) $ show (pM, cM, oM, pToCM, pToOM)
-  gotConflicts = False
-  -}
   mM = mergeDiffMaps pM pToCM pToOM
   gotConflicts = any (isConflict . snd) $ M.toList mM
   merge = unparsePairs . concatMap f . M.toList $ M.map showMerge mM
@@ -137,3 +133,4 @@ main = do
       B.writeFile currentFN merge
       if gotConflicts then exitFailure else exitSuccess
     _ -> error "usage"
+
